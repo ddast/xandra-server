@@ -25,7 +25,7 @@
 
 #define KEYSTRLEN 7
 
-int utf8_to_unicode(const unsigned char c[4])
+int utf8_to_unicode(const unsigned char c[UNICODELEN])
 {
   if (!(c[0] & 0x80)) {
     // one byte
@@ -74,5 +74,14 @@ void send_keypress(int key, xdo_t* xdo)
   snprintf(keystr, KEYSTRLEN, "%#06x", key);
 
   printf("Sending '%s'\n", keystr);
-  xdo_send_keysequence_window(xdo, CURRENTWINDOW, keystr, 12000);
+
+  Window window = 0;
+  int ret = xdo_get_focused_window_sane(xdo, &window);
+  if (ret) {
+    fprintf(stderr, "xdo_get_focused_window_sane");
+  } else {
+    xdo_send_keysequence_window(xdo, window, keystr, 12000);
+  }
+  // the above solution seems to work better with the locale keymap than
+  // xdo_send_keysequence_window(xdo, CURRENTWINDOW, keystr, 12000);
 }

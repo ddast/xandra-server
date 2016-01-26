@@ -23,9 +23,11 @@
 
 #include <xdo.h>
 
+#define UNICODELEN 4
+
 // Converts UTF-8 encoding (one to four byte) to Unicode codeposition.  Returns
 // -1 on malformatted data.
-int utf8_to_unicode(const unsigned char c[4]);
+int utf8_to_unicode(const unsigned char c[UNICODELEN]);
 
 void send_keypress(int key, xdo_t* xdo);
 
