@@ -32,7 +32,7 @@
 #include "server.h"
 #include "unicode.h"
 
-#define PORT "6666"
+#define PORT "64296"
 #define RECVBUFSIZE 4
 
 
