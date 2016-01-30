@@ -73,15 +73,18 @@ void send_keypress(int key, xdo_t* xdo)
   char keystr[KEYSTRLEN];
   snprintf(keystr, KEYSTRLEN, "%#06x", key);
 
+#ifdef DEBUG
   printf("Sending '%s'\n", keystr);
+#endif // DEBUG
 
-  Window window = 0;
-  int ret = xdo_get_focused_window_sane(xdo, &window);
-  if (ret) {
-    fprintf(stderr, "xdo_get_focused_window_sane");
-  } else {
-    xdo_send_keysequence_window(xdo, window, keystr, 12000);
-  }
-  // the above solution seems to work better with the locale keymap than
-  // xdo_send_keysequence_window(xdo, CURRENTWINDOW, keystr, 12000);
+  xdo_send_keysequence_window(xdo, CURRENTWINDOW, keystr, 12000);
+
+  // the following solution might work better with the locale keymap
+  //Window window = 0;
+  //int ret = xdo_get_focused_window_sane(xdo, &window);
+  //if (ret) {
+  //  fprintf(stderr, "xdo_get_focused_window_sane");
+  //} else {
+  //  xdo_send_keysequence_window(xdo, window, keystr, 12000);
+  //}
 }

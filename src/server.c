@@ -134,9 +134,6 @@ void wait_and_receive(int sfd, xdo_t* xdo)
               inet_addr, sizeof inet_addr);
     printf("Connected to %s\n", inet_addr);
 
-    if (send(peer_sfd, "Hello there\n", 12, 0) == -1) {
-      perror("send");
-    }
     receive(peer_sfd, xdo);
     printf("Connection closed\n");
     close(peer_sfd);
@@ -151,7 +148,7 @@ void receive(int sfd, xdo_t* xdo)
   while ((nbytes = recv(sfd, buffer, RECVBUFSIZE, 0)) != 0) {
     if (nbytes == -1) {
       perror("recv");
-      exit(EXIT_FAILURE);
+      continue;
     }
     int unicode = utf8_to_unicode(buffer);
     if (unicode == -1) {
