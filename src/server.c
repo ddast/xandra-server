@@ -33,15 +33,22 @@
 #include "unicode.h"
 
 #define PORT "64296"
+#define TIMEOUT 9
 #define RECVBUFSIZE 4
+#define KEYSTRLEN 7
 
 
 // Returns the presentation IP4 or IP6 address stored in a sockaddr_storage.
 void* get_in_addr(struct sockaddr* addr);
 
-// Receive and processes data until connection is closed by peer.  Uses xdo
-// instance to send keystrokes and mouse movement.
+// Receives and forwards data until connection is closed by peer or times out.
 void receive(int sfd, xdo_t* xdo);
+
+// Processes the received input, depending on the content of buffer:
+// 0:          heartbeat
+// utf8 char:  send character using xdo
+// else:       do nothing
+void process_input(const unsigned char* buffer, xdo_t* xdo);
 
 
 void print_welcome()
@@ -54,6 +61,7 @@ void print_welcome()
     exit(EXIT_FAILURE);
   }
 }
+
 
 void* get_in_addr(struct sockaddr* addr)
 {
@@ -93,6 +101,13 @@ int get_socket()
       exit(EXIT_FAILURE);
     }
 
+    struct timeval tv = { .tv_sec = TIMEOUT, .tv_usec = 0 };
+    if (setsockopt(sfd, SOL_SOCKET, SO_RCVTIMEO,
+                   (char*)&tv, sizeof(struct timeval)) == -1) {
+      perror("setsockopt");
+      exit(EXIT_FAILURE);
+    }
+
     if (bind(sfd, rp->ai_addr, rp->ai_addrlen) == -1) {
       close(sfd);
       perror("bind");
@@ -109,7 +124,7 @@ int get_socket()
     exit(EXIT_FAILURE);
   }
 
-  if (listen(sfd, 1) == -1) {
+  if (listen(sfd, 0) == -1) {
     perror("listen");
     exit(EXIT_FAILURE);
   }
@@ -125,7 +140,8 @@ void wait_and_receive(int sfd, xdo_t* xdo)
   while (1) {
     int peer_sfd = accept(sfd, (struct sockaddr*)&peer_addr, &peer_addr_len);
     if (peer_sfd == -1) {
-      perror("accept");
+      // do not spam timeout messages on accept
+      // perror("accept");
       continue;
     }
 
@@ -148,13 +164,29 @@ void receive(int sfd, xdo_t* xdo)
   while ((nbytes = recv(sfd, buffer, RECVBUFSIZE, 0)) != 0) {
     if (nbytes == -1) {
       perror("recv");
-      continue;
+      return;
     }
-    int unicode = utf8_to_unicode(buffer);
-    if (unicode == -1) {
-      fprintf(stderr, "Received unknown character\n");
-      continue;
-    }
-    send_keypress(utf8_to_unicode(buffer), xdo);
+    process_input(buffer, xdo);
   }
+}
+
+
+void process_input(const unsigned char* buffer, xdo_t* xdo)
+{
+  int unicode = utf8_to_unicode(buffer);
+  if (unicode > 0) {
+    char keystr[KEYSTRLEN];
+    snprintf(keystr, KEYSTRLEN, "%#06x", unicode);
+#ifdef DEBUG
+    printf("Sending '%s'\n", keystr);
+#endif
+    xdo_send_keysequence_window(xdo, CURRENTWINDOW, keystr, 12000);
+  } else if (unicode == -1) {
+    fprintf(stderr, "Received unknown character\n");
+  }
+#ifdef DEBUG
+  else if (unicode == 0) {
+    printf("Received heartbeat\n");
+  }
+#endif
 }

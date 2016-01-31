@@ -29,6 +29,4 @@
 // -1 on malformatted data.
 int utf8_to_unicode(const unsigned char c[UNICODELEN]);
 
-void send_keypress(int key, xdo_t* xdo);
-
 #endif // UNICODE_H
