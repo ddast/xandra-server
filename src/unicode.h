@@ -23,10 +23,9 @@
 
 #include <xdo.h>
 
-#define UNICODELEN 4
-
-// Converts UTF-8 encoding (one to four byte) to Unicode codeposition.  Returns
-// -1 on malformatted data.
-int utf8_to_unicode(const unsigned char c[UNICODELEN]);
+// Converts one UTF-8 encoded character beginning at c (one to four byte) to
+// its Unicode codeposition and stores it in unicode.  Returns the amount of
+// bytes that have been processed.  Returns -1 on malformatted data.
+int utf8_to_unicode(const unsigned char* c, int* unicode);
 
 #endif // UNICODE_H

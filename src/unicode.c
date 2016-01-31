@@ -23,44 +23,47 @@
 
 #include "unicode.h"
 
-int utf8_to_unicode(const unsigned char c[UNICODELEN])
+int utf8_to_unicode(const unsigned char* c, int* unicode)
 {
   if (!(c[0] & 0x80)) {
-    // one byte
-    return c[0];
+    *unicode = c[0];
+    return 1;
   }
 
   if ((c[1] & 0xc0) != 0x80) {
-    return -1;
+    *unicode = -1;
+    return 1;
   }
 
   if ((c[0] & 0xe0) == 0xc0) {
-    // two bytes
-    return (c[0] & 0x1f)<<6 |
-           (c[1] & 0x3f);
+    *unicode = (c[0] & 0x1f)<<6 |
+               (c[1] & 0x3f);
+    return 2;
   }
 
   if ((c[2] & 0xc0) != 0x80) {
-    return -1;
+    *unicode = -1;
+    return 2;
   }
 
   if ((c[0] & 0xf0) == 0xe0) {
-    // three bytes
-    return (c[0] & 0x0f)<<12 |
-           (c[1] & 0x3f)<<6  |
-           (c[2] & 0x3f);
+    *unicode = (c[0] & 0x0f)<<12 |
+               (c[1] & 0x3f)<<6  |
+               (c[2] & 0x3f);
+    return 3;
   }
 
   if ((c[3] & 0xc0) != 0x80) {
-    return -1;
+    *unicode = -1;
+    return 3;
   }
 
   if ((c[0] & 0xf8) == 0xf0) {
-    // four bytes
-    return (c[0] & 0x0f)<<18 |
-           (c[1] & 0x3f)<<12 |
-           (c[2] & 0x3f)<<6  |
-           (c[3] & 0x3f);
+    *unicode = (c[0] & 0x0f)<<18 |
+               (c[1] & 0x3f)<<12 |
+               (c[2] & 0x3f)<<6  |
+               (c[3] & 0x3f);
+    return 4;
   }
 
   return -1;

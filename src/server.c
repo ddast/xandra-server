@@ -34,8 +34,8 @@
 
 #define PORT "64296"
 #define TIMEOUT 9
-#define RECVBUFSIZE 4
-#define KEYSTRLEN 7
+#define RECVBUFSIZE 1024
+#define KEYSEQLEN 11
 
 
 // Returns the presentation IP4 or IP6 address stored in a sockaddr_storage.
@@ -44,12 +44,12 @@ void* get_in_addr(struct sockaddr* addr);
 // Receives and forwards data until connection is closed by peer or times out.
 void receive(int sfd, xdo_t* xdo);
 
-// Processes the received input, depending on the content of buffer:
+// Processes nbytes in buffer.  Possible actions are
 // 0:          heartbeat
 // 1:          send backspace
 // utf8 char:  send character using xdo
 // else:       do nothing
-void process_input(const unsigned char* buffer, xdo_t* xdo);
+void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo);
 
 
 void print_welcome()
@@ -162,34 +162,39 @@ void receive(int sfd, xdo_t* xdo)
 {
   unsigned char buffer[RECVBUFSIZE];
   int nbytes = -1;
-  while ((nbytes = recv(sfd, buffer, RECVBUFSIZE, 0)) != 0) {
+  // do not fill the last three chars of the buffer to prevent a buffer
+  // overflow if the last char looks like a four byte utf8 code
+  while ((nbytes = recv(sfd, buffer, RECVBUFSIZE-3, 0)) != 0) {
     if (nbytes == -1) {
       perror("recv");
       return;
     }
-    process_input(buffer, xdo);
+    process_input(buffer, nbytes, xdo);
   }
 }
 
 
-void process_input(const unsigned char* buffer, xdo_t* xdo)
+void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo)
 {
-  int unicode = utf8_to_unicode(buffer);
-  if (unicode > 1) {
-    char keystr[KEYSTRLEN];
-    snprintf(keystr, KEYSTRLEN, "%#06x", unicode);
-#ifdef DEBUG
-    printf("Sending '%s'\n", keystr);
-#endif
-    xdo_send_keysequence_window(xdo, CURRENTWINDOW, keystr, 12000);
-  } else if (unicode == 1) {
-    xdo_send_keysequence_window(xdo, CURRENTWINDOW, "BackSpace", 12000);
-  } else if (unicode == -1) {
-    fprintf(stderr, "Received unknown character\n");
+  int processed_bytes = 0;
+  while (processed_bytes < nbytes) {
+    int unicode;
+    processed_bytes += utf8_to_unicode(buffer+processed_bytes, &unicode);
+    if (unicode > 1) {
+      char keysequence[KEYSEQLEN];
+      snprintf(keysequence, KEYSEQLEN, "%#010x", unicode);
+      #ifdef DEBUG
+        printf("Sending '%s'\n", keysequence);
+      #endif
+      xdo_send_keysequence_window(xdo, CURRENTWINDOW, keysequence, 12000);
+    } else if (unicode == 1) {
+      xdo_send_keysequence_window(xdo, CURRENTWINDOW, "BackSpace", 12000);
+    } else if (unicode == -1) {
+      fprintf(stderr, "Received unknown character\n");
+    #ifdef DEBUG
+    } else if (unicode == 0) {
+        printf("Received heartbeat\n");
+    #endif
+    }
   }
-#ifdef DEBUG
-  else if (unicode == 0) {
-    printf("Received heartbeat\n");
-  }
-#endif
 }
