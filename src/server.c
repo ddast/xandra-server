@@ -46,6 +46,7 @@ void receive(int sfd, xdo_t* xdo);
 
 // Processes the received input, depending on the content of buffer:
 // 0:          heartbeat
+// 1:          send backspace
 // utf8 char:  send character using xdo
 // else:       do nothing
 void process_input(const unsigned char* buffer, xdo_t* xdo);
@@ -174,13 +175,15 @@ void receive(int sfd, xdo_t* xdo)
 void process_input(const unsigned char* buffer, xdo_t* xdo)
 {
   int unicode = utf8_to_unicode(buffer);
-  if (unicode > 0) {
+  if (unicode > 1) {
     char keystr[KEYSTRLEN];
     snprintf(keystr, KEYSTRLEN, "%#06x", unicode);
 #ifdef DEBUG
     printf("Sending '%s'\n", keystr);
 #endif
     xdo_send_keysequence_window(xdo, CURRENTWINDOW, keystr, 12000);
+  } else if (unicode == 1) {
+    xdo_send_keysequence_window(xdo, CURRENTWINDOW, "BackSpace", 12000);
   } else if (unicode == -1) {
     fprintf(stderr, "Received unknown character\n");
   }
