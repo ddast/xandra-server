@@ -1,4 +1,3 @@
 # xandra-server
-
-Simple TCP server that receives UTF-8 encoded characters and prints them to the
-focused X-window.
+Receives keys from [xandra-android](https://github.com/ddast/xandra-android)
+and prints them on the desktop.  Tested on GNU/Linux.
