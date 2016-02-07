@@ -34,8 +34,18 @@
 
 #define PORT "64296"
 #define TIMEOUT 9
+
 #define RECVBUFSIZE 1024
 #define KEYSEQLEN 11
+
+#define MOUSEEVENT 127
+#define MOUSEEVENTLEN 9
+
+#define RESERVEDCHARS 3
+#define HEARTBEAT 0
+#define BACKSPACE 1
+#define LEFTCLICK 2
+#define RIGHTCLICK 3
 
 
 // Returns the presentation IP4 or IP6 address stored in a sockaddr_storage.
@@ -176,19 +186,36 @@ void receive(int sfd, xdo_t* xdo)
 
 void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo)
 {
+  // mouse event
+  if (buffer[0] == MOUSEEVENT) {
+    if (nbytes != MOUSEEVENTLEN) {
+      fprintf(stderr, "Received malformatted mouse event");
+      return;
+    }
+    int distanceX = buffer[1]<<24 | buffer[2]<<16 | buffer[3]<<8 | buffer[4];
+    int distanceY = buffer[5]<<24 | buffer[6]<<16 | buffer[7]<<8 | buffer[8];
+    xdo_move_mouse_relative(xdo, -distanceX, -distanceY);
+    return;
+  }
+
+  // keyboard event
   int processed_bytes = 0;
   while (processed_bytes < nbytes) {
     int unicode;
     processed_bytes += utf8_to_unicode(buffer+processed_bytes, &unicode);
-    if (unicode > 1) {
+    if (unicode > RESERVEDCHARS) {
       char keysequence[KEYSEQLEN];
       snprintf(keysequence, KEYSEQLEN, "%#010x", unicode);
       #ifdef DEBUG
         printf("Sending '%s'\n", keysequence);
       #endif
       xdo_send_keysequence_window(xdo, CURRENTWINDOW, keysequence, 12000);
-    } else if (unicode == 1) {
+    } else if (unicode == BACKSPACE) {
       xdo_send_keysequence_window(xdo, CURRENTWINDOW, "BackSpace", 12000);
+    } else if (unicode == LEFTCLICK) {
+      xdo_click_window(xdo, CURRENTWINDOW, 1);
+    } else if (unicode == RIGHTCLICK) {
+      xdo_click_window(xdo, CURRENTWINDOW, 3);
     } else if (unicode == -1) {
       fprintf(stderr, "Received unknown character\n");
     #ifdef DEBUG
