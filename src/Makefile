@@ -6,8 +6,8 @@ CFLAGS=-Wall\
        -Wpedantic\
        -std=gnu11\
        -fdiagnostics-color=always\
-       -MMD -MP#\
-       -g -DDEBUG
+       -MMD -MP\
+       -g#-DDEBUG
 LDFLAGS=-lxdo
 LDLIBS=
 
