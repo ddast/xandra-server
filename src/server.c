@@ -189,7 +189,7 @@ void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo)
   // mouse event
   if (buffer[0] == MOUSEEVENT) {
     if (nbytes != MOUSEEVENTLEN) {
-      fprintf(stderr, "Received malformatted mouse event");
+      fprintf(stderr, "Received malformatted mouse event\n");
       return;
     }
     int distanceX = buffer[1]<<24 | buffer[2]<<16 | buffer[3]<<8 | buffer[4];
