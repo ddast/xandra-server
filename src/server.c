@@ -62,6 +62,9 @@ void receive(int sfd, xdo_t* xdo);
 // else:       do nothing
 void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo);
 
+// Print buffer for debugging.
+void print_buffer(const unsigned char* buffer, int nbytes);
+
 
 void print_welcome()
 {
@@ -192,42 +195,57 @@ void receive(int sfd, xdo_t* xdo)
 
 void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo)
 {
-  // mouse event
   if (buffer[0] == MOUSEEVENT) {
-    if (nbytes != MOUSEEVENTLEN) {
+    // mouse event
+    if (nbytes < MOUSEEVENTLEN) {
       fprintf(stderr, "Received malformatted mouse event\n");
+      print_buffer(buffer, nbytes);
       return;
     }
-    int distanceX = buffer[1]<<24 | buffer[2]<<16 | buffer[3]<<8 | buffer[4];
-    int distanceY = buffer[5]<<24 | buffer[6]<<16 | buffer[7]<<8 | buffer[8];
-    xdo_move_mouse_relative(xdo, -distanceX, -distanceY);
-    return;
-  }
-
-  // keyboard event
-  int processed_bytes = 0;
-  while (processed_bytes < nbytes) {
-    int unicode;
-    processed_bytes += utf8_to_unicode(buffer+processed_bytes, &unicode);
-    if (unicode > RESERVEDCHARS) {
-      char keysequence[KEYSEQLEN];
-      snprintf(keysequence, KEYSEQLEN, "%#010x", unicode);
-      #ifdef DEBUG
+    int32_t distanceX = buffer[1]<<24 | buffer[2]<<16 |
+                        buffer[3]<<8 | buffer[4];
+    int32_t distanceY = buffer[5]<<24 | buffer[6]<<16 |
+                        buffer[7]<<8 | buffer[8];
+    xdo_move_mouse_relative(xdo, distanceX, distanceY);
+    if (nbytes > MOUSEEVENTLEN) {
+      process_input(buffer + MOUSEEVENTLEN, nbytes - MOUSEEVENTLEN, xdo);
+    }
+  } else {
+    // keyboard event
+    int processed_bytes = 0;
+    while (processed_bytes < nbytes) {
+      int32_t unicode;
+      processed_bytes += utf8_to_unicode(buffer+processed_bytes, &unicode);
+      if (unicode > RESERVEDCHARS) {
+        char keysequence[KEYSEQLEN];
+        snprintf(keysequence, KEYSEQLEN, "%#010x", unicode);
+        #ifdef DEBUG
         printf("Sending '%s'\n", keysequence);
+        #endif
+        xdo_send_keysequence_window(xdo, CURRENTWINDOW, keysequence, 12000);
+      } else if (unicode == BACKSPACE) {
+        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "BackSpace", 12000);
+      } else if (unicode == LEFTCLICK) {
+        xdo_click_window(xdo, CURRENTWINDOW, 1);
+      } else if (unicode == RIGHTCLICK) {
+        xdo_click_window(xdo, CURRENTWINDOW, 3);
+      } else if (unicode == -1) {
+        fprintf(stderr, "Received unknown character\n");
+        print_buffer(buffer, nbytes);
+      #ifdef DEBUG
+      } else if (unicode == 0) {
+          printf("Received heartbeat\n");
       #endif
-      xdo_send_keysequence_window(xdo, CURRENTWINDOW, keysequence, 12000);
-    } else if (unicode == BACKSPACE) {
-      xdo_send_keysequence_window(xdo, CURRENTWINDOW, "BackSpace", 12000);
-    } else if (unicode == LEFTCLICK) {
-      xdo_click_window(xdo, CURRENTWINDOW, 1);
-    } else if (unicode == RIGHTCLICK) {
-      xdo_click_window(xdo, CURRENTWINDOW, 3);
-    } else if (unicode == -1) {
-      fprintf(stderr, "Received unknown character\n");
-    #ifdef DEBUG
-    } else if (unicode == 0) {
-        printf("Received heartbeat\n");
-    #endif
+      }
     }
   }
+}
+
+void print_buffer(const unsigned char* buffer, int nbytes)
+{
+  fprintf(stderr, "nbytes: %d\n", nbytes);
+  for (int i = 0; i < nbytes; ++i) {
+    fprintf(stderr, "0x%x ", buffer[i]);
+  }
+  fprintf(stderr, "\n");
 }
