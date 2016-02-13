@@ -23,7 +23,7 @@
 
 #include "unicode.h"
 
-int utf8_to_unicode(const unsigned char* c, int* unicode)
+int utf8_to_unicode(const unsigned char* c, int32_t* unicode)
 {
   if (!(c[0] & 0x80)) {
     *unicode = c[0];
