@@ -28,7 +28,7 @@ void print_welcome();
 
 // Binds and listens to a TCP socket on this machine.  Accepts both IP4 and IP6
 // connections.  Returns the socket file descriptor.
-int get_socket();
+int get_socket(char* port);
 
 // Waits for client to connect on the socket sfd.  Accepts first peer and
 // receives data until connection is closed by peer.  Uses xdo instance to send

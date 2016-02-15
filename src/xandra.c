@@ -18,17 +18,45 @@
  *  along with xandra.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <xdo.h>
 
 #include "server.h"
 #include "unicode.h"
 
-int main()
+#define DEFAULTPORT "64296"
+
+void print_help()
 {
+  printf("Usage:\n");
+  printf("xandra             start server on default port %s\n", DEFAULTPORT);
+  printf("xandra [PORT]      start server on port [PORT]\n");
+  printf("xandra --help      display this help and exit\n");
+}
+
+int main(int argc, char* argv[])
+{
+  char* port;
+  if (argc == 1) {
+    port = DEFAULTPORT;
+  } else if (argc == 2) {
+    if (!strcmp(argv[1], "--help")) {
+      print_help();
+      return EXIT_SUCCESS;
+    } else {
+      port = argv[1];
+    }
+  } else {
+    print_help();
+    return EXIT_FAILURE;
+  }
+
   print_welcome();
   xdo_t* xdo = xdo_new(NULL);
-  int sfd = get_socket();
+  int sfd = get_socket(port);
   wait_and_receive(sfd, xdo);
   xdo_free(xdo);
+  return EXIT_SUCCESS;
 }

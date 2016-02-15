@@ -33,7 +33,6 @@
 #include "server.h"
 #include "unicode.h"
 
-#define PORT "64296"
 #define TIMEOUT 9
 
 #define RECVBUFSIZE 1024
@@ -87,7 +86,7 @@ void* get_in_addr(struct sockaddr* addr)
 }
 
 
-int get_socket()
+int get_socket(char* port)
 {
   struct addrinfo hints, *result;
   memset(&hints, 0, sizeof hints);
@@ -95,7 +94,7 @@ int get_socket()
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_flags    = AI_PASSIVE;
 
-  int status = getaddrinfo(NULL, PORT, &hints, &result);
+  int status = getaddrinfo(NULL, port, &hints, &result);
   if (status != 0) {
     fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
     exit(EXIT_FAILURE);
