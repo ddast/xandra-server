@@ -36,16 +36,17 @@
 #define TIMEOUT 9
 
 #define RECVBUFSIZE 1024
-#define KEYSEQLEN 11
+#define KEYSEQLEN   11
 
-#define MOUSEEVENT 127
+#define MOUSEEVENT    127
 #define MOUSEEVENTLEN 9
 
-#define RESERVEDCHARS 3
-#define HEARTBEAT 0
-#define BACKSPACE 1
-#define LEFTCLICK 2
-#define RIGHTCLICK 3
+#define RESERVEDCHARS 32
+#define HEARTBEAT     0x00
+#define BACKSPACE     0x01
+#define LEFTCLICK     0x02
+#define RIGHTCLICK    0x03
+#define RETURN        0x0a
 
 
 // Returns the presentation IP4 or IP6 address stored in a sockaddr_storage.
@@ -215,13 +216,15 @@ void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo)
     while (processed_bytes < nbytes) {
       int32_t unicode;
       processed_bytes += utf8_to_unicode(buffer+processed_bytes, &unicode);
-      if (unicode > RESERVEDCHARS) {
+      if (unicode >= RESERVEDCHARS) {
         char keysequence[KEYSEQLEN];
         snprintf(keysequence, KEYSEQLEN, "%#010x", unicode);
         #ifdef DEBUG
         printf("Sending '%s'\n", keysequence);
         #endif
         xdo_send_keysequence_window(xdo, CURRENTWINDOW, keysequence, 12000);
+      } else if (unicode == RETURN) {
+        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "Return", 12000);
       } else if (unicode == BACKSPACE) {
         xdo_send_keysequence_window(xdo, CURRENTWINDOW, "BackSpace", 12000);
       } else if (unicode == LEFTCLICK) {
