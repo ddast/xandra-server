@@ -46,6 +46,12 @@
 #define BACKSPACE     0x01
 #define LEFTCLICK     0x02
 #define RIGHTCLICK    0x03
+#define ESCAPE        0x04
+#define TAB           0x05
+#define LEFT          0x06
+#define DOWN          0x07
+#define UP            0x08
+#define RIGHT         0x09
 #define RETURN        0x0a
 
 
@@ -231,6 +237,18 @@ void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo)
         xdo_click_window(xdo, CURRENTWINDOW, 1);
       } else if (unicode == RIGHTCLICK) {
         xdo_click_window(xdo, CURRENTWINDOW, 3);
+      } else if (unicode == ESCAPE) {
+        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "Escape", 12000);
+      } else if (unicode == TAB) {
+        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "Tab", 12000);
+      } else if (unicode == LEFT) {
+        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "Left", 12000);
+      } else if (unicode == DOWN) {
+        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "Down", 12000);
+      } else if (unicode == UP) {
+        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "Up", 12000);
+      } else if (unicode == RIGHT) {
+        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "Right", 12000);
       } else if (unicode == -1) {
         fprintf(stderr, "Received unknown character\n");
         print_buffer(buffer, nbytes);
