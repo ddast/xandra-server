@@ -26,10 +26,13 @@
 #include "server.h"
 #include "unicode.h"
 
+#define VERSION "0.1.0"
+
 #define DEFAULTPORT "64296"
 
 void print_help()
 {
+  printf("xanda v%s\n\n", VERSION);
   printf("Usage:\n");
   printf("xandra             start server on default port %s\n", DEFAULTPORT);
   printf("xandra [PORT]      start server on port [PORT]\n");
