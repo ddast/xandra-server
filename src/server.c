@@ -33,6 +33,12 @@
 #include "server.h"
 #include "unicode.h"
 
+#ifdef DEBUG
+# define DEBUG_PRINT(...) printf(__VA_ARGS__)
+#else
+# define DEBUG_PRINT(...) do {} while (0)
+#endif
+
 #define TIMEOUT 9
 
 #define RECVBUFSIZE 1024
@@ -43,9 +49,9 @@
 
 #define RESERVEDCHARS 32
 #define HEARTBEAT     0x00
-#define BACKSPACE     0x01
-#define LEFTCLICK     0x02
-#define RIGHTCLICK    0x03
+#define LEFTCLICK     0x01
+#define RIGHTCLICK    0x02
+#define BACKSPACE     0x03
 #define ESCAPE        0x04
 #define TAB           0x05
 #define LEFT          0x06
@@ -53,7 +59,26 @@
 #define UP            0x08
 #define RIGHT         0x09
 #define RETURN        0x0a
+#define CTRL          0x0b
+#define SUPER         0x0c
+#define ALT           0x0d
 
+#define SPECIALKEYSOFFSET 3
+#define SPECIALKEYSLEN    11
+static const char * const special_keys[SPECIALKEYSLEN] = {
+  "BackSpace",
+  "Escape",
+  "Tab",
+  "Left",
+  "Down",
+  "Up",
+  "Right",
+  "Return",
+  "Ctrl",
+  "Super",
+  "Alt"
+};
+static char modifier_and_key[2*KEYSEQLEN+1];
 
 // Returns the presentation IP4 or IP6 address stored in a sockaddr_storage.
 void* get_in_addr(struct sockaddr* addr);
@@ -222,41 +247,37 @@ void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo)
     while (processed_bytes < nbytes) {
       int32_t unicode;
       processed_bytes += utf8_to_unicode(buffer+processed_bytes, &unicode);
+      if (unicode == 0) {
+        DEBUG_PRINT("Received heartbeat\n");
+        continue;
+      }
       if (unicode >= RESERVEDCHARS) {
         char keysequence[KEYSEQLEN];
         snprintf(keysequence, KEYSEQLEN, "%#010x", unicode);
-        #ifdef DEBUG
-        printf("Sending '%s'\n", keysequence);
-        #endif
-        xdo_send_keysequence_window(xdo, CURRENTWINDOW, keysequence, 12000);
-      } else if (unicode == RETURN) {
-        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "Return", 12000);
-      } else if (unicode == BACKSPACE) {
-        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "BackSpace", 12000);
-      } else if (unicode == LEFTCLICK) {
-        xdo_click_window(xdo, CURRENTWINDOW, 1);
-      } else if (unicode == RIGHTCLICK) {
-        xdo_click_window(xdo, CURRENTWINDOW, 3);
-      } else if (unicode == ESCAPE) {
-        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "Escape", 12000);
-      } else if (unicode == TAB) {
-        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "Tab", 12000);
-      } else if (unicode == LEFT) {
-        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "Left", 12000);
-      } else if (unicode == DOWN) {
-        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "Down", 12000);
-      } else if (unicode == UP) {
-        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "Up", 12000);
-      } else if (unicode == RIGHT) {
-        xdo_send_keysequence_window(xdo, CURRENTWINDOW, "Right", 12000);
-      } else if (unicode == -1) {
+        strcat(modifier_and_key, keysequence);
+        DEBUG_PRINT("Sending '%s'\n", modifier_and_key);
+        xdo_send_keysequence_window(xdo, CURRENTWINDOW, modifier_and_key,
+                                    12000);
+      } else if (unicode < 0) {
         fprintf(stderr, "Received unknown character\n");
         print_buffer(buffer, nbytes);
-      #ifdef DEBUG
-      } else if (unicode == 0) {
-          printf("Received heartbeat\n");
-      #endif
+      } else if (unicode == LEFTCLICK) {
+        DEBUG_PRINT("Sending 'Leftclick'\n");
+        xdo_click_window(xdo, CURRENTWINDOW, 1);
+      } else if (unicode == RIGHTCLICK) {
+        DEBUG_PRINT("Sending 'Rightclick'\n");
+        xdo_click_window(xdo, CURRENTWINDOW, 3);
+      } else if (unicode == CTRL || unicode == SUPER || unicode == ALT) {
+        strcpy(modifier_and_key, special_keys[unicode-SPECIALKEYSOFFSET]);
+        strcat(modifier_and_key, "+");
+        continue;
+      } else if (unicode-SPECIALKEYSOFFSET < SPECIALKEYSLEN) {
+        strcat(modifier_and_key, special_keys[unicode-SPECIALKEYSOFFSET]);
+        DEBUG_PRINT("Sending '%s'\n", modifier_and_key);
+        xdo_send_keysequence_window(xdo, CURRENTWINDOW, modifier_and_key,
+                                    12000);
       }
+      modifier_and_key[0] = '\0';
     }
   }
 }
