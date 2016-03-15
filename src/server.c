@@ -44,40 +44,43 @@
 #define RECVBUFSIZE 1024
 #define KEYSEQLEN   11
 
-#define MOUSEEVENT    127
+#define MOUSEEVENT    0xff
 #define MOUSEEVENTLEN 9
 
 #define RESERVEDCHARS 32
 #define HEARTBEAT     0x00
-#define LEFTCLICK     0x01
-#define RIGHTCLICK    0x02
-#define BACKSPACE     0x03
-#define ESCAPE        0x04
-#define TAB           0x05
-#define LEFT          0x06
-#define DOWN          0x07
-#define UP            0x08
-#define RIGHT         0x09
-#define RETURN        0x0a
-#define CTRL          0x0b
-#define SUPER         0x0c
-#define ALT           0x0d
 
-#define SPECIALKEYSOFFSET 3
-#define SPECIALKEYSLEN    11
-static const char * const special_keys[SPECIALKEYSLEN] = {
-  "BackSpace",
-  "Escape",
-  "Tab",
-  "Left",
-  "Down",
-  "Up",
-  "Right",
-  "Return",
-  "Ctrl",
-  "Super",
-  "Alt"
+#define MOUSECLICKSOFFSET 0x01
+#define MOUSECLICKSLEN    4
+static const int mouse_clicks[MOUSECLICKSLEN] = {
+  1, // LEFTCLICK  0x01
+  3, // RIGHTCLICK 0x02
+  4, // WHEELUP    0x03
+  5  // WHEELDOWN  0x04
 };
+
+
+#define MODIFIERKEYSOFFSET 0x05
+#define MODIFIERKEYSLEN    3
+static const char * const modifier_keys[MODIFIERKEYSLEN] = {
+  "Ctrl",      // 0x05
+  "Super",     // 0x06
+  "Alt"        // 0x07
+};
+
+#define SPECIALKEYSOFFSET 0x08
+#define SPECIALKEYSLEN    8
+static const char * const special_keys[SPECIALKEYSLEN] = {
+  "BackSpace", // 0x08
+  "Escape",    // 0x09
+  "Return",    // 0x0a
+  "Tab",       // 0x0b
+  "Left",      // 0x0c
+  "Down",      // 0x0d
+  "Up",        // 0x0e
+  "Right",     // 0x0f
+};
+
 static char modifier_and_key[2*KEYSEQLEN+1];
 
 // Returns the presentation IP4 or IP6 address stored in a sockaddr_storage.
@@ -86,11 +89,7 @@ void* get_in_addr(struct sockaddr* addr);
 // Receives and forwards data until connection is closed by peer or times out.
 void receive(int sfd, xdo_t* xdo);
 
-// Processes nbytes in buffer.  Possible actions are
-// 0:          heartbeat
-// 1:          send backspace
-// utf8 char:  send character using xdo
-// else:       do nothing
+// Processes nbytes in buffer.
 void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo);
 
 // Print buffer for debugging.
@@ -247,7 +246,7 @@ void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo)
     while (processed_bytes < nbytes) {
       int32_t unicode;
       processed_bytes += utf8_to_unicode(buffer+processed_bytes, &unicode);
-      if (unicode == 0) {
+      if (unicode == HEARTBEAT) {
         DEBUG_PRINT("Received heartbeat\n");
         continue;
       }
@@ -261,17 +260,15 @@ void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo)
       } else if (unicode < 0) {
         fprintf(stderr, "Received unknown character\n");
         print_buffer(buffer, nbytes);
-      } else if (unicode == LEFTCLICK) {
-        DEBUG_PRINT("Sending 'Leftclick'\n");
-        xdo_click_window(xdo, CURRENTWINDOW, 1);
-      } else if (unicode == RIGHTCLICK) {
-        DEBUG_PRINT("Sending 'Rightclick'\n");
-        xdo_click_window(xdo, CURRENTWINDOW, 3);
-      } else if (unicode == CTRL || unicode == SUPER || unicode == ALT) {
-        strcpy(modifier_and_key, special_keys[unicode-SPECIALKEYSOFFSET]);
+      } else if (unicode < MOUSECLICKSOFFSET + MOUSECLICKSLEN) {
+        int mouse_button = mouse_clicks[unicode-MOUSECLICKSOFFSET];
+        DEBUG_PRINT("Sending mouse click %d\n", mouse_button);
+        xdo_click_window(xdo, CURRENTWINDOW, mouse_button);
+      } else if (unicode < MODIFIERKEYSOFFSET + MODIFIERKEYSLEN) {
+        strcpy(modifier_and_key, modifier_keys[unicode-MODIFIERKEYSOFFSET]);
         strcat(modifier_and_key, "+");
         continue;
-      } else if (unicode-SPECIALKEYSOFFSET < SPECIALKEYSLEN) {
+      } else if (unicode < SPECIALKEYSOFFSET + SPECIALKEYSLEN) {
         strcat(modifier_and_key, special_keys[unicode-SPECIALKEYSOFFSET]);
         DEBUG_PRINT("Sending '%s'\n", modifier_and_key);
         xdo_send_keysequence_window(xdo, CURRENTWINDOW, modifier_and_key,
