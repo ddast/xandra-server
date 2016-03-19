@@ -1,6 +1,7 @@
 # xandra-server
 Receives and executes key and mouse events from
 [xandra-android](https://github.com/ddast/xandra-android).
+For more information on what xandra does see the description of xandra-android.
 Tested on GNU/Linux.
 
 ## Usage
@@ -21,4 +22,5 @@ If the keyboard layout is set system wide via a xorg.conf file for some
 configurations xandra ignores these settings and defaults to the English
 layout.
 This can usually be fixed by setting the keyboard layout in the settings of
-your desktop environment or by executing *setxkbmap* (no arguments necessary).
+your desktop environment or by simply executing *setxkbmap* (no arguments
+necessary).
