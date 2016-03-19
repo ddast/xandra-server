@@ -225,8 +225,11 @@ void receive(int sfd, xdo_t* xdo)
 
 void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo)
 {
-  if (buffer[0] == MOUSEEVENT) {
-    // mouse event
+  int processed_bytes = 0;
+  if (buffer[0] == HEARTBEAT) {
+    DEBUG_PRINT("Received heartbeat\n");
+    processed_bytes = 1;
+  } else if (buffer[0] == MOUSEEVENT) {
     if (nbytes < MOUSEEVENTLEN) {
       fprintf(stderr, "Received malformatted mouse event\n");
       print_buffer(buffer, nbytes);
@@ -237,45 +240,42 @@ void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo)
     int32_t distanceY = buffer[5]<<24 | buffer[6]<<16 |
                         buffer[7]<<8 | buffer[8];
     xdo_move_mouse_relative(xdo, distanceX, distanceY);
-    if (nbytes > MOUSEEVENTLEN) {
-      process_input(buffer + MOUSEEVENTLEN, nbytes - MOUSEEVENTLEN, xdo);
+    processed_bytes = MOUSEEVENTLEN;
+  } else { // keyboard event
+    int32_t unicode;
+    processed_bytes = utf8_to_unicode(buffer, &unicode);
+    int flush_modifier = 0;
+    if (unicode >= RESERVEDCHARS) {
+      char keysequence[KEYSEQLEN];
+      snprintf(keysequence, KEYSEQLEN, "%#010x", unicode);
+      strcat(modifier_and_key, keysequence);
+      DEBUG_PRINT("Sending '%s'\n", modifier_and_key);
+      xdo_send_keysequence_window(xdo, CURRENTWINDOW, modifier_and_key,
+                                  12000);
+      flush_modifier = 1;
+    } else if (unicode < 0) {
+      fprintf(stderr, "Received unknown character\n");
+      print_buffer(buffer, nbytes);
+    } else if (unicode < MOUSECLICKSOFFSET + MOUSECLICKSLEN) {
+      int mouse_button = mouse_clicks[unicode-MOUSECLICKSOFFSET];
+      DEBUG_PRINT("Sending mouse click %d\n", mouse_button);
+      xdo_click_window(xdo, CURRENTWINDOW, mouse_button);
+    } else if (unicode < MODIFIERKEYSOFFSET + MODIFIERKEYSLEN) {
+      strcpy(modifier_and_key, modifier_keys[unicode-MODIFIERKEYSOFFSET]);
+      strcat(modifier_and_key, "+");
+    } else if (unicode < SPECIALKEYSOFFSET + SPECIALKEYSLEN) {
+      strcat(modifier_and_key, special_keys[unicode-SPECIALKEYSOFFSET]);
+      DEBUG_PRINT("Sending '%s'\n", modifier_and_key);
+      xdo_send_keysequence_window(xdo, CURRENTWINDOW, modifier_and_key,
+                                  12000);
+      flush_modifier = 1;
     }
-  } else {
-    // keyboard event
-    int processed_bytes = 0;
-    while (processed_bytes < nbytes) {
-      int32_t unicode;
-      processed_bytes += utf8_to_unicode(buffer+processed_bytes, &unicode);
-      if (unicode == HEARTBEAT) {
-        DEBUG_PRINT("Received heartbeat\n");
-        continue;
-      }
-      if (unicode >= RESERVEDCHARS) {
-        char keysequence[KEYSEQLEN];
-        snprintf(keysequence, KEYSEQLEN, "%#010x", unicode);
-        strcat(modifier_and_key, keysequence);
-        DEBUG_PRINT("Sending '%s'\n", modifier_and_key);
-        xdo_send_keysequence_window(xdo, CURRENTWINDOW, modifier_and_key,
-                                    12000);
-      } else if (unicode < 0) {
-        fprintf(stderr, "Received unknown character\n");
-        print_buffer(buffer, nbytes);
-      } else if (unicode < MOUSECLICKSOFFSET + MOUSECLICKSLEN) {
-        int mouse_button = mouse_clicks[unicode-MOUSECLICKSOFFSET];
-        DEBUG_PRINT("Sending mouse click %d\n", mouse_button);
-        xdo_click_window(xdo, CURRENTWINDOW, mouse_button);
-      } else if (unicode < MODIFIERKEYSOFFSET + MODIFIERKEYSLEN) {
-        strcpy(modifier_and_key, modifier_keys[unicode-MODIFIERKEYSOFFSET]);
-        strcat(modifier_and_key, "+");
-        continue;
-      } else if (unicode < SPECIALKEYSOFFSET + SPECIALKEYSLEN) {
-        strcat(modifier_and_key, special_keys[unicode-SPECIALKEYSOFFSET]);
-        DEBUG_PRINT("Sending '%s'\n", modifier_and_key);
-        xdo_send_keysequence_window(xdo, CURRENTWINDOW, modifier_and_key,
-                                    12000);
-      }
+    if (flush_modifier) {
       modifier_and_key[0] = '\0';
     }
+  }
+  if (nbytes > processed_bytes) {
+    process_input(buffer + processed_bytes, nbytes - processed_bytes, xdo);
   }
 }
 
