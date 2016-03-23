@@ -211,9 +211,10 @@ void receive(int sfd, xdo_t* xdo)
 {
   unsigned char buffer[RECVBUFSIZE];
   int nbytes = -1;
-  // do not fill the last three chars of the buffer to prevent a buffer
-  // overflow if the last char looks like a four byte utf8 code
-  while ((nbytes = recv(sfd, buffer, RECVBUFSIZE-3, 0)) != 0) {
+  // do not fill the last (KEYSEQLEN-1) chars of the buffer to prevent a buffer
+  // overflow if the last character misleadlingly looks like the longest key
+  // sequence
+  while ((nbytes = recv(sfd, buffer, RECVBUFSIZE-KEYSEQLEN+1, 0)) != 0) {
     if (nbytes == -1) {
       perror("recv");
       return;
@@ -236,9 +237,9 @@ void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo)
       return;
     }
     int32_t distanceX = buffer[1]<<24 | buffer[2]<<16 |
-                        buffer[3]<<8 | buffer[4];
+                        buffer[3]<<8  | buffer[4];
     int32_t distanceY = buffer[5]<<24 | buffer[6]<<16 |
-                        buffer[7]<<8 | buffer[8];
+                        buffer[7]<<8  | buffer[8];
     xdo_move_mouse_relative(xdo, distanceX, distanceY);
     processed_bytes = MOUSEEVENTLEN;
   } else { // keyboard event
