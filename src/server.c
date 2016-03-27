@@ -262,8 +262,15 @@ void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo)
       DEBUG_PRINT("Sending mouse click %d\n", mouse_button);
       xdo_click_window(xdo, CURRENTWINDOW, mouse_button);
     } else if (unicode < MODIFIERKEYSOFFSET + MODIFIERKEYSLEN) {
-      strcpy(modifier_and_key, modifier_keys[unicode-MODIFIERKEYSOFFSET]);
-      strcat(modifier_and_key, "+");
+      const char* cur_modifier = modifier_keys[unicode-MODIFIERKEYSOFFSET];
+      if (!strncmp(modifier_and_key, cur_modifier, strlen(cur_modifier))) {
+        DEBUG_PRINT("Sending '%s'\n", cur_modifier);
+        xdo_send_keysequence_window(xdo, CURRENTWINDOW, cur_modifier, 12000);
+        flush_modifier = 1;
+      } else {
+        strcpy(modifier_and_key, cur_modifier);
+        strcat(modifier_and_key, "+");
+      }
     } else if (unicode < SPECIALKEYSOFFSET + SPECIALKEYSLEN) {
       strcat(modifier_and_key, special_keys[unicode-SPECIALKEYSOFFSET]);
       DEBUG_PRINT("Sending '%s'\n", modifier_and_key);
