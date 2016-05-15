@@ -30,9 +30,9 @@ void print_welcome();
 // connections.  Returns the socket file descriptor.
 int get_socket(char* port);
 
-// Waits for client to connect on the socket sfd.  Accepts first peer and
-// receives data until connection is closed by peer.  Uses xdo instance to send
-// keystrokes and mouse movement.
-void wait_and_receive(int sfd, xdo_t* xdo);
+// Waits for client to connect on the socket sfd.  Accepts first peer, then
+// closes sfd and receives data until connection is closed by peer.  Uses xdo
+// instance to send keystrokes and mouse movement.
+void accept_and_receive(int sfd, xdo_t* xdo);
 
 #endif // SERVER_H

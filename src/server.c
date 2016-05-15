@@ -203,27 +203,24 @@ int get_socket(char* port)
 }
 
 
-void wait_and_receive(int sfd, xdo_t* xdo)
+void accept_and_receive(int sfd, xdo_t* xdo)
 {
   struct sockaddr_storage peer_addr;
   socklen_t peer_addr_len = sizeof peer_addr;
-  while (1) {
-    int peer_sfd = accept(sfd, (struct sockaddr*)&peer_addr, &peer_addr_len);
-    if (peer_sfd == -1) {
-      // do not spam timeout messages on accept
-      // perror("accept");
-      continue;
-    }
-
-    char inet_addr[INET6_ADDRSTRLEN];
-    inet_ntop(peer_addr.ss_family, get_in_addr((struct sockaddr*)&peer_addr),
-              inet_addr, sizeof inet_addr);
-    printf("Connected to %s\n", inet_addr);
-
-    receive(peer_sfd, xdo);
-    printf("Connection closed\n");
-    close(peer_sfd);
+  int peer_sfd = -1;
+  while (peer_sfd == -1) {
+    peer_sfd = accept(sfd, (struct sockaddr*)&peer_addr, &peer_addr_len);
   }
+  close(sfd);
+
+  char inet_addr[INET6_ADDRSTRLEN];
+  inet_ntop(peer_addr.ss_family, get_in_addr((struct sockaddr*)&peer_addr),
+            inet_addr, sizeof inet_addr);
+  printf("Connected to %s\n", inet_addr);
+
+  receive(peer_sfd, xdo);
+  close(peer_sfd);
+  printf("Connection closed\n");
 }
 
 

@@ -58,8 +58,10 @@ int main(int argc, char* argv[])
 
   print_welcome();
   xdo_t* xdo = xdo_new(NULL);
-  int sfd = get_socket(port);
-  wait_and_receive(sfd, xdo);
+  while (1) {
+    int sfd = get_socket(port);
+    accept_and_receive(sfd, xdo);
+  }
   xdo_free(xdo);
   return EXIT_SUCCESS;
 }
