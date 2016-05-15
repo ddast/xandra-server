@@ -28,7 +28,6 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#include <linux/tcp.h>
 
 #include "server.h"
 #include "unicode.h"
@@ -169,11 +168,6 @@ int get_socket(char* port)
     struct timeval tv = { .tv_sec = TIMEOUT, .tv_usec = 0 };
     if (setsockopt(sfd, SOL_SOCKET, SO_RCVTIMEO,
                    (char*)&tv, sizeof(struct timeval)) == -1) {
-      perror("setsockopt");
-      exit(EXIT_FAILURE);
-    }
-
-    if (setsockopt(sfd, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(int)) == -1) {
       perror("setsockopt");
       exit(EXIT_FAILURE);
     }
