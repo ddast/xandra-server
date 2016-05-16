@@ -38,7 +38,7 @@
 # define DEBUG_PRINT(...) do {} while (0)
 #endif
 
-#define TIMEOUT 9
+#define TIMEOUT 3
 
 #define RECVBUFSIZE 1024
 #define KEYSEQLEN   20
