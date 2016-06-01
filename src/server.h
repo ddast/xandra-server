@@ -32,7 +32,8 @@ int get_socket(char* port);
 
 // Waits for client to connect on the socket sfd.  Accepts first peer, then
 // closes sfd and receives data until connection is closed by peer.  Uses xdo
-// instance to send keystrokes and mouse movement.
-void accept_and_receive(int sfd, xdo_t* xdo);
+// instance to send keystrokes and mouse movement.  Stops if running is set to
+// 0.
+void accept_and_receive(int sfd, xdo_t* xdo, int* running);
 
 #endif // SERVER_H

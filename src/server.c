@@ -105,8 +105,9 @@ static char modifier_and_key[2*KEYSEQLEN+1];
 // Returns the presentation IP4 or IP6 address stored in a sockaddr_storage.
 void* get_in_addr(struct sockaddr* addr);
 
-// Receives and forwards data until connection is closed by peer or times out.
-void receive(int sfd, xdo_t* xdo);
+// Receives and forwards data until connection is closed by peer, times out
+// or running is set to 0.
+void receive(int sfd, xdo_t* xdo, int* running);
 
 // Processes nbytes in buffer.
 void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo);
@@ -197,12 +198,17 @@ int get_socket(char* port)
 }
 
 
-void accept_and_receive(int sfd, xdo_t* xdo)
+void accept_and_receive(int sfd, xdo_t* xdo, int* running)
 {
   struct sockaddr_storage peer_addr;
   socklen_t peer_addr_len = sizeof peer_addr;
   int peer_sfd = -1;
   while (peer_sfd == -1) {
+    if (!*running){
+      close(sfd);
+      printf("Shutting down...\n");
+      return;
+    }
     peer_sfd = accept(sfd, (struct sockaddr*)&peer_addr, &peer_addr_len);
   }
   close(sfd);
@@ -212,13 +218,13 @@ void accept_and_receive(int sfd, xdo_t* xdo)
             inet_addr, sizeof inet_addr);
   printf("Connected to %s\n", inet_addr);
 
-  receive(peer_sfd, xdo);
+  receive(peer_sfd, xdo, running);
   close(peer_sfd);
   printf("Connection closed\n");
 }
 
 
-void receive(int sfd, xdo_t* xdo)
+void receive(int sfd, xdo_t* xdo, int* running)
 {
   unsigned char buffer[RECVBUFSIZE];
   int nbytes = -1;
@@ -226,6 +232,10 @@ void receive(int sfd, xdo_t* xdo)
   // overflow if the last character misleadlingly looks like the longest key
   // sequence
   while ((nbytes = recv(sfd, buffer, RECVBUFSIZE-KEYSEQLEN+1, 0)) != 0) {
+    if (!*running) {
+      printf("Shutting down...\n");
+      return;
+    }
     if (nbytes == -1) {
       perror("recv");
       return;

@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <signal.h>
 #include <xdo.h>
 
 #include "server.h"
@@ -29,6 +30,8 @@
 #define VERSION "0.4.2"
 
 #define DEFAULTPORT "64296"
+
+static int running = 1;
 
 void print_help()
 {
@@ -39,8 +42,19 @@ void print_help()
   printf("xandra --help      display this help and exit\n");
 }
 
+void sig_handler(int signo)
+{
+  if (signo == SIGINT) {
+    running = 0;
+  }
+}
+
 int main(int argc, char* argv[])
 {
+  struct sigaction sa;
+  sa.sa_handler = &sig_handler;
+  sigaction(SIGINT, &sa, NULL);
+
   char* port;
   switch (argc) {
   case 1:
@@ -61,9 +75,9 @@ int main(int argc, char* argv[])
 
   print_welcome();
   xdo_t* xdo = xdo_new(NULL);
-  while (1) {
+  while (running) {
     int sfd = get_socket(port);
-    accept_and_receive(sfd, xdo);
+    accept_and_receive(sfd, xdo, &running);
   }
   xdo_free(xdo);
   return EXIT_SUCCESS;
