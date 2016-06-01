@@ -42,16 +42,19 @@ void print_help()
 int main(int argc, char* argv[])
 {
   char* port;
-  if (argc == 1) {
+  switch (argc) {
+  case 1:
     port = DEFAULTPORT;
-  } else if (argc == 2) {
+    break;
+  case 2:
     if (!strcmp(argv[1], "--help")) {
       print_help();
       return EXIT_SUCCESS;
     } else {
       port = argv[1];
     }
-  } else {
+    break;
+  default:
     print_help();
     return EXIT_FAILURE;
   }
