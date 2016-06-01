@@ -27,7 +27,7 @@
 #include "server.h"
 #include "unicode.h"
 
-#define VERSION "0.4.2"
+#define VERSION "0.4.3"
 
 #define DEFAULTPORT "64296"
 
