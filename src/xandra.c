@@ -52,8 +52,13 @@ void sig_handler(int signo)
 int main(int argc, char* argv[])
 {
   struct sigaction sa;
+  memset(&sa, 0, sizeof(struct sigaction));
+  sigemptyset(&sa.sa_mask);
   sa.sa_handler = &sig_handler;
-  sigaction(SIGINT, &sa, NULL);
+  if (sigaction(SIGINT, &sa, NULL) == -1) {
+    perror("sigaction");
+    return EXIT_FAILURE;
+  }
 
   char* port;
   switch (argc) {
