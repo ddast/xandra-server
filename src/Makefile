@@ -1,24 +1,66 @@
+#------------------------------------------------------------------------------
+
+prefix=/usr/local
+bindir=${prefix}/bin
+DESTDIR=
 binname=xandra
+OBJ=server.o unicode.o xandra.o
 
 CC=gcc
-CFLAGS=-Wall\
+# release
+CFLAGS=-std=gnu11 -O3
+# development
+#CFLAGS=-pedantic\
        -Wextra\
-       -Wpedantic\
+       -Wall\
+       -Waggregate-return\
+       -Wcast-align\
+       -Wcast-qual\
+       -Wconversion\
+       -Wfloat-equal\
+       -Wlogical-op\
+       -Wpointer-arith\
+       -Wredundant-decls\
+       -Wshadow\
+       -Wstrict-overflow=5\
+       -Wswitch-default\
+       -Wswitch-enum\
+       -Wundef\
+       -Wwrite-strings\
+       -Wbad-function-cast\
+       -Wmissing-prototypes\
+       -Wnested-externs\
+       -Wstrict-prototypes\
        -std=gnu11\
+       -O0\
        -fdiagnostics-color=always\
-       -MMD -MP\
-       -g#-DDEBUG
-LDFLAGS=-lxdo
-LDLIBS=
+       -ggdb\
+       -DDEBUG
+LDFLAGS=
+LDLIBS=-lxdo
 
-SRC=$(wildcard *.c)
-OBJ=$(SRC:.c=.o)
-DEP=$(SRC:.c=.d)
+#------------------------------------------------------------------------------
+
+.PHONY: all clean distclean install uninstall
+
+all: $(binname)
 
 $(binname): $(OBJ)
 
--include $(DEP)
+server.o: server.c server.h unicode.h
 
-.PHONY: clean
+unicode.o: unicode.c unicode.h
+
+xandra.o: xandra.c server.h unicode.h
+
 clean:
-	rm -f $(binname) $(OBJ) $(DEP)
+	rm -f $(binname) $(OBJ)
+
+distclean: clean
+
+install: $(binname)
+	install -d $(DESTDIR)$(bindir)
+	install $(binname) $(DESTDIR)$(bindir)/$(binname)
+
+uninstall:
+	rm $(DESTDIR)$(bindir)/$(binname)
