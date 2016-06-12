@@ -110,13 +110,13 @@ void* get_in_addr(struct sockaddr* addr);
 void receive(int sfd, xdo_t* xdo, int* running);
 
 // Processes nbytes in buffer.
-void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo);
+void process_input(const unsigned char* buffer, ssize_t nbytes, xdo_t* xdo);
 
 // Print buffer for debugging.
-void print_buffer(const unsigned char* buffer, int nbytes);
+void print_buffer(const unsigned char* buffer, ssize_t nbytes);
 
 
-void print_welcome()
+void print_welcome(void)
 {
   char hostname[128];
   if (gethostname(hostname, sizeof hostname) == 0) {
@@ -137,7 +137,7 @@ void* get_in_addr(struct sockaddr* addr)
 }
 
 
-int get_socket(char* port)
+int get_socket(const char* port)
 {
   struct addrinfo hints, *result;
   memset(&hints, 0, sizeof hints);
@@ -227,7 +227,7 @@ void accept_and_receive(int sfd, xdo_t* xdo, int* running)
 void receive(int sfd, xdo_t* xdo, int* running)
 {
   unsigned char buffer[RECVBUFSIZE];
-  int nbytes = -1;
+  ssize_t nbytes = -1;
   // do not fill the last (KEYSEQLEN-1) chars of the buffer to prevent a buffer
   // overflow if the last character misleadlingly looks like the longest key
   // sequence
@@ -245,7 +245,7 @@ void receive(int sfd, xdo_t* xdo, int* running)
 }
 
 
-void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo)
+void process_input(const unsigned char* buffer, ssize_t nbytes, xdo_t* xdo)
 {
   int processed_bytes = 0, flush_modifier = 0;
   if (buffer[0] == HEARTBEAT) {
@@ -312,9 +312,9 @@ void process_input(const unsigned char* buffer, int nbytes, xdo_t* xdo)
   }
 }
 
-void print_buffer(const unsigned char* buffer, int nbytes)
+void print_buffer(const unsigned char* buffer, ssize_t nbytes)
 {
-  fprintf(stderr, "nbytes: %d\n", nbytes);
+  fprintf(stderr, "nbytes: %ld\n", nbytes);
   for (int i = 0; i < nbytes; ++i) {
     fprintf(stderr, "0x%x ", buffer[i]);
   }

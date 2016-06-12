@@ -33,7 +33,14 @@
 
 static int running = 1;
 
-void print_help()
+// Print version and usage information
+void print_help(void);
+
+// Set the global variable running to 0 for SIGINT
+void sig_handler(int signo);
+
+
+void print_help(void)
 {
   printf("xandra v%s\n\n", VERSION);
   printf("Usage:\n");
@@ -60,7 +67,7 @@ int main(int argc, char* argv[])
     return EXIT_FAILURE;
   }
 
-  char* port;
+  const char* port;
   switch (argc) {
   case 1:
     port = DEFAULTPORT;

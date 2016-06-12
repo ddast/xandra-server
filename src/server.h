@@ -24,11 +24,11 @@
 #include <xdo.h>
 
 // Prints a welcome message including the hostname
-void print_welcome();
+void print_welcome(void);
 
 // Binds and listens to a TCP socket on this machine.  Accepts both IP4 and IP6
 // connections.  Returns the socket file descriptor.
-int get_socket(char* port);
+int get_socket(const char* port);
 
 // Waits for client to connect on the socket sfd.  Accepts first peer, then
 // closes sfd and receives data until connection is closed by peer.  Uses xdo
