@@ -15,6 +15,45 @@ xandra [PORT]      start server on port [PORT]
 xandra --help      display this help and exit
 ```
 
+## Installation
+
+There are no binaries for download so you have to compile for yourself.
+
+### Prerequisites
+
+xandra requires the libxdo library which is available for most distributions:
+
+* Arch Linux  
+  ```
+  # pacman -S xdotool  
+  ```
+* Debian/Ubuntu  
+  ```
+  # apt-get install libxdo-dev
+  ```
+* Fedora  
+  ```
+  # dnf install libxdo-devel libX11-devel
+  ```
+* openSUSE  
+  ```
+  # zyper install xdotool-devel
+  ```
+
+Depending on your installation installing a C compiler (probably *gcc*) or
+*make* may also be required.
+
+### Compiling
+Download current version from
+[here](https://github.com/ddast/xandra-server/releases) and unpack.
+```
+$ cd xandra-server/src
+$ make
+```
+Copy the resulting binary *xandra* to your preferred place (or use *make
+install*).
+
+
 ## Troubleshooting
 
 **xandra uses the wrong keyboard layout (e.g. types z instead of y)**
@@ -25,3 +64,8 @@ layout.
 This can usually be fixed by setting the keyboard layout in the settings of
 your desktop environment or by simply executing *setxkbmap* (no arguments
 necessary).
+
+**Cannot connect to xandra**
+
+Some distributions (such as Fedora) use a firewall that will deny access.
+You have to allow TCP connections on port 64296.
