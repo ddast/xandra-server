@@ -37,14 +37,14 @@ xandra requires the libxdo library which is available for most distributions:
   ```
 * openSUSE  
   ```
-  # zyper install xdotool-devel
+  # zypper install xdotool-devel
   ```
 
 Depending on your installation installing a C compiler (probably *gcc*) or
 *make* may also be required.
 
 ### Compiling
-Download current version from
+Download the current version from
 [here](https://github.com/ddast/xandra-server/releases) and unpack.
 ```
 $ cd xandra-server/src
@@ -68,4 +68,4 @@ necessary).
 **Cannot connect to xandra**
 
 Some distributions (such as Fedora) use a firewall that will deny access.
-You have to allow TCP connections on port 64296.
+To solve this you have to allow TCP connections on port 64296.
