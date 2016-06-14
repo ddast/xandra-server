@@ -6,7 +6,6 @@ DESTDIR=
 binname=xandra
 OBJ=server.o unicode.o xandra.o
 
-CC=gcc
 # release
 CFLAGS=-std=gnu11 -O3
 # development
@@ -41,11 +40,10 @@ LDLIBS=-lxdo
 
 #------------------------------------------------------------------------------
 
-.PHONY: all clean distclean install uninstall
-
 all: $(binname)
 
 $(binname): $(OBJ)
+	$(CC) $(LDFLAGS) $(OBJ) $(LDLIBS) -o $(binname)
 
 server.o: server.c server.h unicode.h
 
@@ -64,3 +62,5 @@ install: $(binname)
 
 uninstall:
 	rm $(DESTDIR)$(bindir)/$(binname)
+
+.PHONY: all clean distclean install uninstall
