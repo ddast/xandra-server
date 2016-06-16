@@ -26,9 +26,10 @@
 // Prints a welcome message including the hostname
 void print_welcome(void);
 
-// Binds and listens to a TCP socket on this machine.  Accepts both IP4 and IP6
-// connections.  Returns the socket file descriptor.
-int get_socket(const char* port);
+// Binds and listens to a TCP socket on this machine.  If protocol is 0 use
+// either IPv4 or IPv6, if protocol is 4 (6) use only IPv4 (IPv6).  Returns the
+// socket file descriptor.
+int get_socket(const char* port, int protocol);
 
 // Waits for client to connect on the socket sfd.  Accepts first peer, then
 // closes sfd and receives data until connection is closed by peer.  Uses xdo

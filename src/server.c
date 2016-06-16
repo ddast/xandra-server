@@ -137,13 +137,17 @@ void* get_in_addr(struct sockaddr* addr)
 }
 
 
-int get_socket(const char* port)
+int get_socket(const char* port, int protocol)
 {
   struct addrinfo hints, *result;
   memset(&hints, 0, sizeof hints);
-  hints.ai_family   = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_flags    = AI_PASSIVE;
+  switch (protocol) {
+    case 4:  hints.ai_family = AF_INET;   break;
+    case 6:  hints.ai_family = AF_INET6;  break;
+    default: hints.ai_family = AF_UNSPEC; break;
+  }
 
   int status = getaddrinfo(NULL, port, &hints, &result);
   if (status != 0) {

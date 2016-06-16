@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <signal.h>
 #include <xdo.h>
 
@@ -33,20 +34,23 @@
 
 static int running = 1;
 
-// Print version and usage information
+// Prints version and usage information
 void print_help(void);
 
-// Set the global variable running to 0 for SIGINT
+// Sets the global variable running to 0 for SIGINT
 void sig_handler(int signo);
 
+// Returns 1 (0) if str is (not) a number
+int str_is_number(const char* str);
 
 void print_help(void)
 {
-  printf("xandra v%s\n\n", VERSION);
-  printf("Usage:\n");
-  printf("xandra             start server on default port %s\n", DEFAULTPORT);
-  printf("xandra [PORT]      start server on port [PORT]\n");
-  printf("xandra --help      display this help and exit\n");
+  printf("xandra v%s\n", VERSION);
+  printf("Usage: xandra [-4|-6] [PORT]\n");
+  printf("Start xandra server on port PORT (default %s).\n\n", DEFAULTPORT);
+  printf("  -4          use only IPv4\n");
+  printf("  -6          use only IPv6\n");
+  printf("  --help      display this help and exit\n");
 }
 
 void sig_handler(int signo)
@@ -54,6 +58,16 @@ void sig_handler(int signo)
   if (signo == SIGINT) {
     running = 0;
   }
+}
+
+int str_is_number(const char* str)
+{
+  for (; *str; ++str) {
+    if (isdigit(*str) == 0) {
+      return 0;
+    }
+  }
+  return 1;
 }
 
 int main(int argc, char* argv[])
@@ -67,28 +81,33 @@ int main(int argc, char* argv[])
     return EXIT_FAILURE;
   }
 
-  const char* port;
-  switch (argc) {
-  case 1:
-    port = DEFAULTPORT;
-    break;
-  case 2:
-    if (!strcmp(argv[1], "--help")) {
-      print_help();
-      return EXIT_SUCCESS;
-    } else {
-      port = argv[1];
-    }
-    break;
-  default:
+  if (argc > 3) {
     print_help();
     return EXIT_FAILURE;
+  }
+
+  const char* port = DEFAULTPORT;
+  int protocol = 0;
+  for (int i = 1; i < argc; ++i) {
+    if (!strcmp(argv[i], "--help")) {
+      print_help();
+      return EXIT_SUCCESS;
+    } else if (!strcmp(argv[i], "-4")) {
+      protocol = 4;
+    } else if (!strcmp(argv[i], "-6")) {
+      protocol = 6;
+    } else if (str_is_number(argv[i])) {
+      port = argv[i];
+    } else {
+      print_help();
+      return EXIT_FAILURE;
+    }
   }
 
   print_welcome();
   xdo_t* xdo = xdo_new(NULL);
   while (running) {
-    int sfd = get_socket(port);
+    int sfd = get_socket(port, protocol);
     accept_and_receive(sfd, xdo, &running);
   }
   xdo_free(xdo);
