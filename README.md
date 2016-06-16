@@ -3,7 +3,7 @@ Receives and executes key and mouse events from
 [xandra-android](https://github.com/ddast/xandra-android).
 For more information on what xandra does see the description of xandra-android.
 
-Tested on GNU/Linux.
+Tested on GNU/Linux and BSD.
 
 ## Usage
 
