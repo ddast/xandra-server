@@ -10,9 +10,13 @@ Tested on GNU/Linux.
 Usually starting xandra without parameters should suffice.
 It is, however, possible to start the server on a different port.
 ```
-xandra             start server on default port 64296
-xandra [PORT]      start server on port [PORT]
-xandra --help      display this help and exit
+Usage: xandra [-4|-6] [PORT]
+Start xandra server on port PORT (default 64296).
+
+  -4          use only IPv4
+  -6          use only IPv6
+  --help      display this help and exit
+
 ```
 
 ## Installation
@@ -39,6 +43,9 @@ xandra requires the libxdo library which is available for most distributions:
   ```
   # zypper install xdotool-devel
   ```
+* FreeBSD  
+  The version in ports (x11/xdotool) is too old (2.20110530.1) and does not
+  work.  With a more current version from upstream it works fine.
 
 Depending on your installation installing a C compiler (probably *gcc*) or
 *make* may also be required.
