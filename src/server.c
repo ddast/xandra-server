@@ -100,8 +100,6 @@ static const char * const special_keys[SPECIALKEYSLEN] = {
   "F12",                   // 0x22
 };
 
-static char modifier_and_key[2*KEYSEQLEN+1];
-
 // Returns the presentation IP4 or IP6 address stored in a sockaddr_storage.
 void* get_in_addr(struct sockaddr* addr);
 
@@ -110,7 +108,8 @@ void* get_in_addr(struct sockaddr* addr);
 void receive(int sfd, xdo_t* xdo, int* running);
 
 // Processes nbytes in buffer.
-void process_input(const unsigned char* buffer, ssize_t nbytes, xdo_t* xdo);
+void process_input(const unsigned char* buffer, ssize_t nbytes,
+                   char* modifier_and_key, xdo_t* xdo);
 
 // Print buffer for debugging.
 void print_buffer(const unsigned char* buffer, ssize_t nbytes);
@@ -232,6 +231,8 @@ void receive(int sfd, xdo_t* xdo, int* running)
 {
   unsigned char buffer[RECVBUFSIZE];
   ssize_t nbytes = -1;
+  char modifier_and_key[2*KEYSEQLEN+1];
+
   // do not fill the last (KEYSEQLEN-1) chars of the buffer to prevent a buffer
   // overflow if the last character misleadlingly looks like the longest key
   // sequence
@@ -244,12 +245,13 @@ void receive(int sfd, xdo_t* xdo, int* running)
       perror("recv");
       return;
     }
-    process_input(buffer, nbytes, xdo);
+    process_input(buffer, nbytes, modifier_and_key, xdo);
   }
 }
 
 
-void process_input(const unsigned char* buffer, ssize_t nbytes, xdo_t* xdo)
+void process_input(const unsigned char* buffer, ssize_t nbytes,
+                   char* modifier_and_key, xdo_t* xdo)
 {
   int processed_bytes = 0, flush_modifier = 0;
   if (buffer[0] == HEARTBEAT) {
@@ -312,7 +314,8 @@ void process_input(const unsigned char* buffer, ssize_t nbytes, xdo_t* xdo)
     modifier_and_key[0] = '\0';
   }
   if (nbytes > processed_bytes) {
-    process_input(buffer + processed_bytes, nbytes - processed_bytes, xdo);
+    process_input(buffer + processed_bytes, nbytes - processed_bytes,
+                  modifier_and_key, xdo);
   }
 }
 
