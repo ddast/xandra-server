@@ -34,7 +34,7 @@ int utf8_to_unicode(const unsigned char* c, uint32_t* unicode)
     if ((c[i-1] & 0xc0) != 0x80) {
       return -1;
     }
-    if ((c[0] & (unsigned char)~(0xff>>(i+1))) == (unsigned char)~(0xff>>i)) {
+    if ((c[0] & (unsigned char)~(0xff)>>(i+1)) == (unsigned char)~(0xff)>>i) {
       *unicode = (uint32_t)(c[0] & 0xff>>(i+1))<<(6*(i-1));
       for (int j = 1; j < i; ++j) {
         *unicode = *unicode | (uint32_t)(c[j] & 0x3f)<<(6*(i-j-1));
