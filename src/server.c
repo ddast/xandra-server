@@ -292,9 +292,9 @@ void process_input(const unsigned char* buffer, ssize_t nbytes,
     }
     processed_bytes = 2;
   } else {
-    int32_t unicode;
+    uint32_t unicode;
     processed_bytes = utf8_to_unicode(buffer, &unicode);
-    if (unicode >= 0) {
+    if (processed_bytes != -1) {
       char keysequence[KEYSEQLEN];
       if (unicode == 0x0a) {
         snprintf(keysequence, KEYSEQLEN, "Return");
@@ -308,6 +308,7 @@ void process_input(const unsigned char* buffer, ssize_t nbytes,
     } else {
       fprintf(stderr, "Received unknown character\n");
       print_buffer(buffer, nbytes);
+      processed_bytes = 1;
     }
   }
   if (flush_modifier) {
@@ -318,6 +319,7 @@ void process_input(const unsigned char* buffer, ssize_t nbytes,
                   modifier_and_key, xdo);
   }
 }
+
 
 void print_buffer(const unsigned char* buffer, ssize_t nbytes)
 {
