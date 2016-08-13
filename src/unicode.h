@@ -21,7 +21,7 @@
 #ifndef UNICODE_H
 #define UNICODE_H
 
-#include <xdo.h>
+#include <stdint.h>
 
 // Converts one UTF-8 encoded character beginning at c (one to four byte) to
 // its Unicode codeposition and stores it in unicode.  Returns the amount of

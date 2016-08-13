@@ -30,40 +30,18 @@ int utf8_to_unicode(const unsigned char* c, int32_t* unicode)
     return 1;
   }
 
-  if ((c[1] & 0xc0) != 0x80) {
-    *unicode = -1;
-    return 1;
-  }
-
-  if ((c[0] & 0xe0) == 0xc0) {
-    *unicode = (c[0] & 0x1f)<<6 |
-               (c[1] & 0x3f);
-    return 2;
-  }
-
-  if ((c[2] & 0xc0) != 0x80) {
-    *unicode = -1;
-    return 2;
-  }
-
-  if ((c[0] & 0xf0) == 0xe0) {
-    *unicode = (c[0] & 0x0f)<<12 |
-               (c[1] & 0x3f)<<6  |
-               (c[2] & 0x3f);
-    return 3;
-  }
-
-  if ((c[3] & 0xc0) != 0x80) {
-    *unicode = -1;
-    return 3;
-  }
-
-  if ((c[0] & 0xf8) == 0xf0) {
-    *unicode = (c[0] & 0x0f)<<18 |
-               (c[1] & 0x3f)<<12 |
-               (c[2] & 0x3f)<<6  |
-               (c[3] & 0x3f);
-    return 4;
+  for (int i = 2; i <= 6; ++i) {
+    if ((c[i-1] & 0xc0) != 0x80) {
+      *unicode = -1;
+      return i;
+    }
+    if ((c[0] & (unsigned char)~(0xff>>(i+1))) == (unsigned char)~(0xff>>i)) {
+      *unicode = (c[0] & 0xff>>(i+1))<<(6*(i-1));
+      for (int j = 1; j < i; ++j) {
+        *unicode = *unicode | (c[j] & 0x3f)<<(6*(i-j-1));
+      }
+      return i;
+    }
   }
 
   return -1;
