@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -40,15 +41,10 @@
 
 #define TIMEOUT 3
 
-#define RECVBUFSIZE 1024
+#define RECVBUFSIZE 128
 #define KEYSEQLEN   20
 
-#define MOUSEEVENT    0xff
-#define MOUSEEVENTLEN 9
-
 #define HEARTBEAT 0x00
-
-#define SPECIALKEY 0xfe
 
 #define MOUSECLICKSOFFSET 0x00
 #define MOUSECLICKSLEN    4
@@ -103,22 +99,34 @@ static const char * const special_keys[SPECIALKEYSLEN] = {
 // Returns the presentation IP4 or IP6 address stored in a sockaddr_storage.
 void* get_in_addr(struct sockaddr* addr);
 
-// Receives and forwards data until connection is closed by peer, times out
-// or running is set to 0.
+// Receives and forwards data to process_input until connection is closed by
+// peer, times out or running is set to 0.
 void receive(int sfd, xdo_t* xdo, int* running);
 
-// Processes nbytes in buffer.
-void process_input(const unsigned char* buffer, ssize_t nbytes,
-                   char* modifier_and_key, xdo_t* xdo);
+// Processes maximum nbytes in buffer by repeatedly calling process_character.
+// Returns the amount of processed bytes which might by less than nbytes.
+size_t process_input(const uint8_t* buffer, size_t nbytes,
+                     char* modifier_and_key, xdo_t* xdo);
+
+// Reads one character with at most maxbytes bytes in buffer and processes its
+// input.  If the character finishes a keysequence it is executed using xdo.
+// If not it is stored in the array modifier_and_key with minimum length
+// 2*KEYSEQLEN+1.
+// Return value:
+//   > 0, the amount of processed bytes
+//   -1, malformed input, skip this character
+//   -n, buffer contains an n-byte character but n>maxbytes
+ssize_t process_character(const uint8_t* buffer, size_t maxbytes,
+                          char* modifier_and_key, xdo_t* xdo);
 
 // Print buffer for debugging.
-void print_buffer(const unsigned char* buffer, ssize_t nbytes);
+void print_buffer(const uint8_t* buffer, size_t nbytes);
 
 
 void print_welcome(void)
 {
   char hostname[128];
-  if (gethostname(hostname, sizeof hostname) == 0) {
+  if (!gethostname(hostname, sizeof hostname)) {
     printf("Starting server on '%s'...\n", hostname);
   } else {
     perror("gethostname");
@@ -149,7 +157,7 @@ int get_socket(const char* port, int protocol)
   }
 
   int status = getaddrinfo(NULL, port, &hints, &result);
-  if (status != 0) {
+  if (status) {
     fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
     exit(EXIT_FAILURE);
   }
@@ -229,14 +237,13 @@ void accept_and_receive(int sfd, xdo_t* xdo, int* running)
 
 void receive(int sfd, xdo_t* xdo, int* running)
 {
-  unsigned char buffer[RECVBUFSIZE];
-  ssize_t nbytes = -1;
+  uint8_t buffer[RECVBUFSIZE];
+  ssize_t nbytes = 0;
   char modifier_and_key[2*KEYSEQLEN+1];
+  modifier_and_key[0] = '\0';
 
-  // do not fill the last (KEYSEQLEN-1) chars of the buffer to prevent a buffer
-  // overflow if the last character misleadlingly looks like the longest key
-  // sequence
-  while ((nbytes = recv(sfd, buffer, RECVBUFSIZE-KEYSEQLEN+1, 0)) != 0) {
+  size_t transfer = 0;
+  while ((nbytes = recv(sfd, buffer+transfer, RECVBUFSIZE-transfer, 0))) {
     if (!*running) {
       printf("Shutting down...\n");
       return;
@@ -245,87 +252,111 @@ void receive(int sfd, xdo_t* xdo, int* running)
       perror("recv");
       return;
     }
-    process_input(buffer, nbytes, modifier_and_key, xdo);
+    size_t unbytes = (size_t)nbytes;
+    size_t processed = process_input(buffer, unbytes+transfer,
+                                     modifier_and_key, xdo);
+    if (processed < unbytes) {
+      printf("receive: memmove\n");
+      memmove(buffer, buffer+processed, (unbytes-processed)*sizeof(uint8_t));
+      transfer = unbytes-processed;
+    }
   }
 }
 
 
-void process_input(const unsigned char* buffer, ssize_t nbytes,
-                   char* modifier_and_key, xdo_t* xdo)
+size_t process_input(const uint8_t* buffer, size_t nbytes,
+                     char* modifier_and_key, xdo_t* xdo)
 {
-  int processed_bytes = 0, flush_modifier = 0;
-  if (buffer[0] == HEARTBEAT) {
-    DEBUG_PRINT("Received heartbeat\n");
-    processed_bytes = 1;
-  } else if (buffer[0] == MOUSEEVENT) {
-    if (nbytes < MOUSEEVENTLEN) {
-      fprintf(stderr, "Received malformatted mouse event\n");
-      print_buffer(buffer, nbytes);
-      return;
+  size_t processed_bytes = 0;
+  while (nbytes > processed_bytes) {
+    ssize_t processed = process_character(buffer + processed_bytes,
+                                          nbytes - processed_bytes,
+                                          modifier_and_key, xdo);
+    if (processed == -1) {
+      DEBUG_PRINT("Printing malformed input:\n");
+      print_buffer(buffer + processed_bytes, nbytes - processed_bytes);
+      processed = 1;
     }
-    int32_t distanceX = buffer[1]<<24 | buffer[2]<<16 |
-                        buffer[3]<<8  | buffer[4];
-    int32_t distanceY = buffer[5]<<24 | buffer[6]<<16 |
-                        buffer[7]<<8  | buffer[8];
-    xdo_move_mouse_relative(xdo, distanceX, distanceY);
-    processed_bytes = MOUSEEVENTLEN;
-  } else if (buffer[0] == SPECIALKEY) {
-    if (buffer[1] < MOUSECLICKSOFFSET + MOUSECLICKSLEN) {
-      int mouse_button = mouse_clicks[buffer[1]-MOUSECLICKSOFFSET];
+    if (processed < -1) {
+      return processed_bytes;
+    }
+    processed_bytes += (size_t)processed;
+  }
+  return processed_bytes;
+}
+
+
+ssize_t process_character(const uint8_t* buffer, size_t maxbytes,
+                          char* modifier_and_key, xdo_t* xdo)
+{
+  ssize_t processed_bytes = 0;
+  uint32_t unicode = 0;
+  processed_bytes = utf8_to_unicode(buffer, &unicode, maxbytes);
+
+  if (processed_bytes < 0) {
+    DEBUG_PRINT("Received malformed (-1) or incomplete input (-n): %zd\n",
+                processed_bytes);
+    return processed_bytes;
+  }
+  if (processed_bytes <= 4) {
+    if (unicode == HEARTBEAT) {
+      DEBUG_PRINT("Received heartbeat\n");
+      return processed_bytes;
+    }
+    char keysequence[KEYSEQLEN];
+    if (unicode == 0x0a) {
+      snprintf(keysequence, KEYSEQLEN, "Return");
+    } else {
+      snprintf(keysequence, KEYSEQLEN, "%#010x", unicode);
+    }
+    strcat(modifier_and_key, keysequence);
+    DEBUG_PRINT("Sending '%s'\n", modifier_and_key);
+    xdo_send_keysequence_window(xdo, CURRENTWINDOW, modifier_and_key, 12000);
+    modifier_and_key[0] = '\0';
+    return processed_bytes;
+  }
+  if (processed_bytes == 5) {
+    uint16_t u1 = (uint16_t)(unicode>>13);
+    uint16_t u2 = (uint16_t)(unicode & 0x1fff);
+    int distX = ((u1 & 0x1000) ? -1 : 1) * (u1 & 0xfff);
+    int distY = ((u2 & 0x1000) ? -1 : 1) * (u2 & 0xfff);
+    DEBUG_PRINT("Mouse movement x: %d; y: %d\n", distX, distY);
+    xdo_move_mouse_relative(xdo, distX, distY);
+    return processed_bytes;
+  }
+  if (processed_bytes == 6) {
+    if (unicode < MOUSECLICKSOFFSET + MOUSECLICKSLEN) {
+      int mouse_button = mouse_clicks[unicode-MOUSECLICKSOFFSET];
       DEBUG_PRINT("Sending mouse click %d\n", mouse_button);
       xdo_click_window(xdo, CURRENTWINDOW, mouse_button);
-    } else if (buffer[1] < MODIFIERKEYSOFFSET + MODIFIERKEYSLEN) {
-      const char* cur_modifier = modifier_keys[buffer[1]-MODIFIERKEYSOFFSET];
+    } else if (unicode < MODIFIERKEYSOFFSET + MODIFIERKEYSLEN) {
+      const char* cur_modifier = modifier_keys[unicode-MODIFIERKEYSOFFSET];
       if (!strncmp(modifier_and_key, cur_modifier, strlen(cur_modifier))) {
         DEBUG_PRINT("Sending '%s'\n", cur_modifier);
         xdo_send_keysequence_window(xdo, CURRENTWINDOW, cur_modifier, 12000);
-        flush_modifier = 1;
+        modifier_and_key[0] = '\0';
       } else {
         strcpy(modifier_and_key, cur_modifier);
         strcat(modifier_and_key, "+");
       }
-    } else if (buffer[1] < SPECIALKEYSOFFSET + SPECIALKEYSLEN) {
-      strcat(modifier_and_key, special_keys[buffer[1]-SPECIALKEYSOFFSET]);
+    } else if (unicode < SPECIALKEYSOFFSET + SPECIALKEYSLEN) {
+      strcat(modifier_and_key, special_keys[unicode-SPECIALKEYSOFFSET]);
       DEBUG_PRINT("Sending '%s'\n", modifier_and_key);
       xdo_send_keysequence_window(xdo, CURRENTWINDOW, modifier_and_key, 12000);
-      flush_modifier = 1;
+      modifier_and_key[0] = '\0';
     }
-    processed_bytes = 2;
-  } else {
-    uint32_t unicode;
-    processed_bytes = utf8_to_unicode(buffer, &unicode);
-    if (processed_bytes != -1) {
-      char keysequence[KEYSEQLEN];
-      if (unicode == 0x0a) {
-        snprintf(keysequence, KEYSEQLEN, "Return");
-      } else {
-        snprintf(keysequence, KEYSEQLEN, "%#010x", unicode);
-      }
-      strcat(modifier_and_key, keysequence);
-      DEBUG_PRINT("Sending '%s'\n", modifier_and_key);
-      xdo_send_keysequence_window(xdo, CURRENTWINDOW, modifier_and_key, 12000);
-      flush_modifier = 1;
-    } else {
-      fprintf(stderr, "Received unknown character\n");
-      print_buffer(buffer, nbytes);
-      processed_bytes = 1;
-    }
+    return processed_bytes;
   }
-  if (flush_modifier) {
-    modifier_and_key[0] = '\0';
-  }
-  if (nbytes > processed_bytes) {
-    process_input(buffer + processed_bytes, nbytes - processed_bytes,
-                  modifier_and_key, xdo);
-  }
+  DEBUG_PRINT("This must not happen: processed_bytes=%zd\n", processed_bytes);
+  return -1;
 }
 
 
-void print_buffer(const unsigned char* buffer, ssize_t nbytes)
+void print_buffer(const uint8_t* buffer, size_t nbytes)
 {
-  fprintf(stderr, "nbytes: %ld\n", nbytes);
-  for (int i = 0; i < nbytes; ++i) {
-    fprintf(stderr, "0x%x ", buffer[i]);
+  DEBUG_PRINT("nbytes: %ld\n", nbytes);
+  for (size_t i = 0; i < nbytes; ++i) {
+    DEBUG_PRINT("0x%x ", buffer[i]);
   }
-  fprintf(stderr, "\n");
+  DEBUG_PRINT("\n");
 }

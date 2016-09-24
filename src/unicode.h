@@ -23,9 +23,13 @@
 
 #include <stdint.h>
 
-// Converts one UTF-8 encoded character beginning at c (one to four byte) to
-// its Unicode codeposition and stores it in unicode.  Returns the amount of
-// bytes that have been processed.  Returns -1 on malformatted data.
-int utf8_to_unicode(const unsigned char* c, uint32_t* unicode);
+// Converts one UTF-8 encoded character beginning at c (one to six bytes) to
+// its Unicode codeposition and stores it in unicode.  Processes at most
+// maxbytes bytes of the buffer c.
+// Return value:
+//   on success, the amount of processed bytes
+//   -1 on malformed data
+//   -n if first byte indicates an n-byte character, but n > maxbytes
+ssize_t utf8_to_unicode(const uint8_t* c, uint32_t* unicode, size_t maxbytes);
 
 #endif // UNICODE_H
