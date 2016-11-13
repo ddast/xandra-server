@@ -47,53 +47,54 @@
 #define HEARTBEAT 0x00
 
 #define MOUSECLICKSOFFSET 0x00
-#define MOUSECLICKSLEN    4
+#define MOUSECLICKSLEN    5
 static const int mouse_clicks[MOUSECLICKSLEN] = {
-  1,  // LEFTCLICK  0x00
-  3,  // RIGHTCLICK 0x01
-  4,  // WHEELUP    0x02
-  5   // WHEELDOWN  0x03
+  1,  // LEFTCLICK   0x00
+  2,  // MIDDLECLICK 0x01
+  3,  // RIGHTCLICK  0x02
+  4,  // WHEELUP     0x03
+  5   // WHEELDOWN   0x04
 };
 
-#define MODIFIERKEYSOFFSET 0x04
+#define MODIFIERKEYSOFFSET 0x05
 #define MODIFIERKEYSLEN    3
 static const char * const modifier_keys[MODIFIERKEYSLEN] = {
-  "Ctrl",  // 0x04
-  "Super", // 0x05
-  "Alt"    // 0x06
+  "Ctrl",  // 0x05
+  "Super", // 0x06
+  "Alt"    // 0x07
 };
 
-#define SPECIALKEYSOFFSET 0x07
-#define SPECIALKEYSLEN    29
+#define SPECIALKEYSOFFSET 0x08
+#define SPECIALKEYSLEN    28
 static const char * const special_keys[SPECIALKEYSLEN] = {
-  "BackSpace",             // 0x07
-  "Escape",                // 0x08
-  "Tab",                   // 0x09
-  "Left",                  // 0x0a
-  "Down",                  // 0x0b
-  "Up",                    // 0x0c
-  "Right",                 // 0x0d
-  "XF86AudioLowerVolume",  // 0x0e
-  "XF86AudioRaiseVolume",  // 0x0f
-  "XF86AudioMute",         // 0x10
-  "Insert",                // 0x11
-  "Delete",                // 0x12
-  "Home",                  // 0x13
-  "End",                   // 0x14
-  "Page_Up",               // 0x15
-  "Page_Down",             // 0x16
-  "F1",                    // 0x17
-  "F2",                    // 0x18
-  "F3",                    // 0x19
-  "F4",                    // 0x1a
-  "F5",                    // 0x1b
-  "F6",                    // 0x1c
-  "F7",                    // 0x1d
-  "F8",                    // 0x1e
-  "F9",                    // 0x1f
-  "F10",                   // 0x20
-  "F11",                   // 0x21
-  "F12",                   // 0x22
+  "BackSpace",             // 0x08
+  "Escape",                // 0x09
+  "Tab",                   // 0x0a
+  "Left",                  // 0x0b
+  "Down",                  // 0x0c
+  "Up",                    // 0x0d
+  "Right",                 // 0x0e
+  "XF86AudioLowerVolume",  // 0x0f
+  "XF86AudioRaiseVolume",  // 0x10
+  "XF86AudioMute",         // 0x11
+  "Insert",                // 0x12
+  "Delete",                // 0x13
+  "Home",                  // 0x14
+  "End",                   // 0x15
+  "Page_Up",               // 0x16
+  "Page_Down",             // 0x17
+  "F1",                    // 0x18
+  "F2",                    // 0x19
+  "F3",                    // 0x1a
+  "F4",                    // 0x1b
+  "F5",                    // 0x1c
+  "F6",                    // 0x1d
+  "F7",                    // 0x1e
+  "F8",                    // 0x1f
+  "F9",                    // 0x20
+  "F10",                   // 0x21
+  "F11",                   // 0x22
+  "F12",                   // 0x23
 };
 
 // Returns the presentation IP4 or IP6 address stored in a sockaddr_storage.
