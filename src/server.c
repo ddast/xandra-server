@@ -97,6 +97,9 @@ static const char * const special_keys[SPECIALKEYSLEN] = {
   "F12",                   // 0x23
 };
 
+#define MOUSEDOWN 0x24
+#define MOUSEUP   0x25
+
 // Returns the presentation IP4 or IP6 address stored in a sockaddr_storage.
 void* get_in_addr(struct sockaddr* addr);
 
@@ -345,6 +348,12 @@ ssize_t process_character(const uint8_t* buffer, size_t maxbytes,
       DEBUG_PRINT("Sending '%s'\n", modifier_and_key);
       xdo_send_keysequence_window(xdo, CURRENTWINDOW, modifier_and_key, 12000);
       modifier_and_key[0] = '\0';
+    } else if (unicode == MOUSEDOWN) {
+      DEBUG_PRINT("Sending mouse down\n");
+      xdo_mouse_down(xdo, CURRENTWINDOW, 1);
+    } else if (unicode == MOUSEUP) {
+      DEBUG_PRINT("Sending mouse up\n");
+      xdo_mouse_up(xdo, CURRENTWINDOW, 1);
     }
     return processed_bytes;
   }
